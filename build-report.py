@@ -76,7 +76,7 @@ if files['forecast']:
 
         if rtype == '2025 Actual' and sn is not None and isinstance(sn, (int, float)):
             cat = {'sn': current_sn, 'name': current_name, 'rep': current_rep,
-                   'aob': 0, 'rolling': 0, 'y25_actual': n(row[5]), 'yoy': 0,
+                   'aob': 0, 'rolling': 0, 'rolling_ytd': 0, 'y25_actual': n(row[5]), 'yoy': 0,
                    'monthly_aob': [0]*12, 'monthly_rolling': [0]*12, 'monthly_y25': read_monthly(row) if row[5] else [0]*12}
             categories.append(cat)
 
@@ -88,7 +88,9 @@ if files['forecast']:
         elif rtype == 'Rolling Forecast' and categories:
             categories[-1]['rolling'] = n(row[5])
             if n(row[5]):
-                categories[-1]['monthly_rolling'] = read_monthly(row)
+                mr = read_monthly(row)
+            categories[-1]['monthly_rolling'] = mr
+            categories[-1]['rolling_ytd'] = sum(mr[:5])  # Jan-May YTD
 
         elif rtype == 'yoy' and categories:
             categories[-1]['yoy'] = n(row[5])
@@ -188,14 +190,23 @@ if files['prod']:
         ns = str(row[1]).strip() if row[1] else ''
         if ns and 'Total' not in ns and 'Dead' not in ns and 'New' not in ns and len(ns)<20:
             team.append({'n': ns, 'y26': n(row[2]), 'y25': n(row[3])})
-    # GA from production review
+    # GA actual YTD from production review
     rows_g = list(wb3['2026-GA'].iter_rows(min_row=3, values_only=True))
+    ga_actual_ytd = {}
     for rw in rows_g:
         cc = str(rw[7]).strip() if rw[7] else ''
         yy = str(rw[8]).strip() if rw[8] else ''
-        def mk_ga(r): return {months_lbl[j].lower(): float(n(r[9+j])) if 9+j < len(r) else 0 for j in range(5)} if len(r) > 14 else None
-        if cc == 'Domestic' and yy == '2026': ga_dom = mk_ga(rw)
-        if cc == 'International' and yy == '2026': ga_int = mk_ga(rw)
+        def mk_ga(r): 
+            m = {}
+            for j in range(5):
+                if 9+j < len(r):
+                    m[months_lbl[j].lower()] = float(n(r[9+j]))
+            m['ytd'] = sum(m.values())
+            return m
+        if yy == '2026' and cc:
+            ga_actual_ytd[cc.lower()] = mk_ga(rw)
+    ga_dom = ga_actual_ytd.get('domestic')
+    ga_int = ga_actual_ytd.get('international')
 
 st26 = sum(s['y26'] for s in team)
 st25 = sum(s['y25'] for s in team)
@@ -348,7 +359,7 @@ for cat in top_cats:
     yoy_pct = ((cat['rolling']/cat['y25_actual'])*100-100) if cat['y25_actual'] else 0
     vcls = 'gn' if var >= 0 else 'rd'
     ycls = 'gn' if yoy_pct >= 0 else 'rd'
-    H.append(f'<tr><td>{cat["name"][:30]}</td><td>{cat["rep"][:18] or "—"}</td><td class="ar">{fmt(cat["y25_actual"]) if cat["y25_actual"] else "—"}</td><td class="ar">{fmt(cat["aob"])}</td><td class="ar">{fmt(cat["rolling"])}</td><td class="pr {vcls}">{"+" if var>=0 else ""}{fmt(abs(var))}</td><td class="pr {vcls}">{"+" if vpct>=0 else ""}{vpct:.1f}%</td><td class="pr {ycls}">{"+" if yoy_pct>=0 else ""}{yoy_pct:.1f}%</td></tr>')
+    H.append(f'<tr><td>{cat["name"][:30]}</td><td>{cat["rep"][:18] or "—"}</td><td class="ar">{fmt(cat["y25_actual"]) if cat["y25_actual"] else "—"}</td><td class="ar">{fmt(cat["aob"])}</td><td class="ar">{fmt(cat["rolling"])}</td><td class="ar">{fmt(cat.get("rolling_ytd", 0)) if cat.get("rolling_ytd", 0) else "—"}</td><td class="pr {vcls}">{"+" if var>=0 else ""}{fmt(abs(var))}</td><td class="pr {vcls}">{"+" if vpct>=0 else ""}{vpct:.1f}%</td><td class="pr {ycls}">{"+" if yoy_pct>=0 else ""}{yoy_pct:.1f}%</td></tr>')
 H.append('</tbody></table></div></div></div>')
 
 # ─── GA REVENUE (from Rolling Forecast) ───
@@ -357,38 +368,60 @@ ga_dom_cat = next((c for c in real_cats if 'GA-Domestic' in c['name']), None)
 ga_int_cat = next((c for c in real_cats if 'GA-International' in c['name']), None)
 
 if ga_dom_cat or ga_int_cat:
-    H.append(f'<div class="sec"><div class="sh"><span class="l">📡 GA Revenue (Rolling Forecast)</span><span class="t">Domestic + International</span></div>')
+    # Get actual YTD from Production Review if available
+    dom_actual_ytd = sum(ga_dom.values()) if ga_dom and isinstance(ga_dom, dict) else 0
+    int_actual_ytd = sum(ga_int.values()) if ga_int and isinstance(ga_int, dict) else 0
+
+    H.append(f'<div class="sec"><div class="sh"><span class="l">\U0001f4e1 GA Revenue</span><span class="t">Actual YTD vs Rolling Forecast vs AOB</span></div>')
     H.append('<div class="gr g3">')
     if ga_dom_cat:
         dom_var = ga_dom_cat['rolling'] - ga_dom_cat['aob']
         dom_vc = 'gn' if dom_var >= 0 else 'rd'
         dom_var_pct = (abs(dom_var)/ga_dom_cat['aob']*100) if ga_dom_cat and ga_dom_cat['aob'] else 0
         dom_var_sgn = '+' if dom_var >= 0 else ''
-        H.append(f'<div class="kc"><div class="kt">GA-Domestic Rolling</div><div class="kv kv-sm">{fmt(ga_dom_cat["rolling"])}</div><div class="kd {dom_vc}">vs AOB {fmt(ga_dom_cat["aob"])} · {dom_var_sgn}{dom_var_pct:.1f}%</div></div>')
+        dom_act_vs_roll = dom_actual_ytd - ga_dom_cat['rolling_ytd']
+        dom_arv = 'gn' if dom_act_vs_roll >= 0 else 'rd'
+        H.append(f'<div class="kc" style="border-top:3px solid #2d6b4f"><div class="kt">GA-Domestic</div>')
+        H.append(f'<div class="kv kv-sm">{fmt(ga_dom_cat["rolling"])}</div>')
+        H.append(f'<div class="kd {dom_vc}">Full Yr Rolling vs AOB: {dom_var_sgn}{dom_var_pct:.1f}%</div>')
+        H.append(f'<div class="kd" style="margin-top:4px;font-size:10px;color:var(--text2)">Actual YTD: {fmt(dom_actual_ytd)} | Rolling YTD: {fmt(ga_dom_cat["rolling_ytd"])} | AOB YTD: {fmt(sum(ga_dom_cat.get("monthly_aob",[0]*12)[:5]))}</div>')
+        H.append(f'</div>')
     if ga_int_cat:
         int_var = ga_int_cat['rolling'] - ga_int_cat['aob']
         int_vc = 'gn' if int_var >= 0 else 'rd'
         int_var_pct = (abs(int_var)/ga_int_cat['aob']*100) if ga_int_cat['aob'] else 0
         int_var_sgn = '+' if int_var >= 0 else ''
-        H.append(f'<div class="kc"><div class="kt">GA-International Rolling</div><div class="kv kv-sm">{fmt(ga_int_cat["rolling"])}</div><div class="kd {int_vc}">vs AOB {fmt(ga_int_cat["aob"])} · {int_var_sgn}{int_var_pct:.1f}%</div></div>')
+        H.append(f'<div class="kc" style="border-top:3px solid #d4af37"><div class="kt">GA-International</div>')
+        H.append(f'<div class="kv kv-sm">{fmt(ga_int_cat["rolling"])}</div>')
+        H.append(f'<div class="kd {int_vc}">Full Yr Rolling vs AOB: {int_var_sgn}{int_var_pct:.1f}%</div>')
+        H.append(f'<div class="kd" style="margin-top:4px;font-size:10px;color:var(--text2)">Actual YTD: {fmt(int_actual_ytd)} | Rolling YTD: {fmt(ga_int_cat["rolling_ytd"])}</div>')
+        H.append(f'</div>')
     ga_total = (ga_dom_cat['rolling'] if ga_dom_cat else 0) + (ga_int_cat['rolling'] if ga_int_cat else 0)
     ga_aob = (ga_dom_cat['aob'] if ga_dom_cat else 0) + (ga_int_cat['aob'] if ga_int_cat else 0)
     ga_var_pct = ((ga_total/ga_aob)*100-100) if ga_aob else 0
-    H.append(f'<div class="kc"><div class="kt">GA Total Rolling</div><div class="kv kv-sm">{fmt(ga_total)}</div><div class="kd gn">{"+" if ga_var_pct>=0 else ""}{ga_var_pct:.1f}% vs AOB</div></div>')
+    H.append(f'<div class="kc"><div class="kt">GA Total Rolling FY</div><div class="kv kv-sm">{fmt(ga_total)}</div><div class="kd gn">{"+" if ga_var_pct>=0 else ""}{ga_var_pct:.1f}% vs AOB</div></div>')
     H.append('</div>')
 
-    # GA monthly table
-    ga_months = {m: [] for m in months_lbl}
-    for j, m in enumerate(months_lbl):
-        dv = ga_dom_cat.get('monthly_rolling', [0]*12)[j] if ga_dom_cat and ga_dom_cat.get('monthly_rolling') and len(ga_dom_cat['monthly_rolling']) > j else 0
-        da = ga_dom_cat.get('monthly_aob', [0]*12)[j] if ga_dom_cat and ga_dom_cat.get('monthly_aob') and len(ga_dom_cat['monthly_aob']) > j else 0
-        iv = ga_int_cat.get('monthly_rolling', [0]*12)[j] if ga_int_cat and ga_int_cat.get('monthly_rolling') and len(ga_int_cat['monthly_rolling']) > j else 0
-        ga_months[m] = {'dom': dv, 'int': iv, 'aob': da}
-    H.append('<div class="ca" style="margin-top:10px"><div class="tw"><table><thead><tr><th>Month</th><th class="ar">GA-Domestic (Rolling)</th><th class="ar">GA-International (Rolling)</th><th class="ar">Total</th></tr></thead><tbody>')
-    for m in months_lbl:
-        d = ga_months[m]
-        if d['dom'] == 0 and d['int'] == 0: continue
-        H.append(f'<tr><td>{m}</td><td class="ar">{fmt(d["dom"])}</td><td class="ar">{fmt(d["int"])}</td><td class="ar">{fmt(d["dom"]+d["int"])}</td></tr>')
+    # GA monthly comparison table with Act YTD vs Rolling
+    H.append('<div class="ca" style="margin-top:10px"><div class="tw"><table><thead><tr>')
+    H.append('<th>Month</th><th class="ar">Domestic Act YTD</th><th class="ar">Domestic Rolling</th><th class="ar">Intl Act YTD</th><th class="ar">Intl Rolling</th><th class="pr">Total (Act)</th><th class="pr">Total (Rolling)</th>')
+    H.append('</tr></thead><tbody>')
+    months_labels_short = ['Jan','Feb','Mar','Apr','May']
+    month_keys = ['jan','feb','mar','apr','may']
+    for j, m in enumerate(months_labels_short):
+        mk = month_keys[j]
+        da = float(n(ga_dom.get(mk, 0))) if ga_dom else 0
+        dr = float(ga_dom_cat.get('monthly_rolling', [0]*12)[j]) if ga_dom_cat and ga_dom_cat.get('monthly_rolling') and len(ga_dom_cat['monthly_rolling']) > j else 0
+        ia = float(n(ga_int.get(mk, 0))) if ga_int else 0
+        ir = float(ga_int_cat.get('monthly_rolling', [0]*12)[j]) if ga_int_cat and ga_int_cat.get('monthly_rolling') and len(ga_int_cat['monthly_rolling']) > j else 0
+        if da == 0 and ia == 0: continue
+        H.append(f'<tr><td>{m}</td><td class="ar">{fmt(da)}</td><td class="ar">{fmt(dr)}</td><td class="ar">{fmt(ia)}</td><td class="ar">{fmt(ir)}</td><td class="pr">{fmt(da+ia)}</td><td class="pr">{fmt(dr+ir)}</td></tr>')
+    # YTD totals row
+    dom_act_ytd = sum(float(n(ga_dom.get(mk, 0))) for mk in month_keys) if ga_dom else 0
+    dom_roll_ytd = ga_dom_cat['rolling_ytd'] if ga_dom_cat else 0
+    int_act_ytd = sum(float(n(ga_int.get(mk, 0))) for mk in month_keys) if ga_int else 0
+    int_roll_ytd = ga_int_cat['rolling_ytd'] if ga_int_cat else 0
+    H.append(f'<tr style="font-weight:600;border-top:2px solid var(--border)"><td>YTD (Jan–May)</td><td class="ar">{fmt(dom_act_ytd)}</td><td class="ar">{fmt(dom_roll_ytd)}</td><td class="ar">{fmt(int_act_ytd)}</td><td class="ar">{fmt(int_roll_ytd)}</td><td class="pr">{fmt(dom_act_ytd+int_act_ytd)}</td><td class="pr">{fmt(dom_roll_ytd+int_roll_ytd)}</td></tr>')
     H.append('</tbody></table></div></div></div>')
 
 # ─── KEY ACCOUNTS ───
