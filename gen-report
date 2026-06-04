@@ -12,7 +12,7 @@ echo "  ⛳ Spring City Golf Report Generator"
 echo "═══════════════════════════════════════"
 
 # Check for data files
-DATA_DIR="$HOME/Work/高尔夫/05_球会报告与报表/Monthly Report Gen"
+DATA_DIR="$HOME/Desktop/Monthly Report Gen"
 if [ ! -d "$DATA_DIR" ]; then
     echo "⚠️  Data directory not found: $DATA_DIR"
 fi

@@ -10,7 +10,7 @@ from datetime import datetime
 
 def n(v): return v if isinstance(v, (int, float)) else 0
 def fmt(n): return f'¥{n:,.0f}'
-DESKTOP = os.path.expanduser('/Users/shawn/Work/高尔夫/05_球会报告与报表/Monthly Report Gen')
+DESKTOP = os.path.expanduser('~/Desktop/Monthly Report Gen')
 WORKSPACE = os.path.dirname(os.path.abspath(__file__))
 OUT = os.path.join(WORKSPACE, 'monthly-report-dashboard.html')
 
