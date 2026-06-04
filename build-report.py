@@ -249,13 +249,13 @@ H.append(f'''<!DOCTYPE html>
 <title>Spring City Sales Dashboard · {MON}</title>
 <meta property="og:title" content="Spring City Sales Dashboard">
 <meta property="og:description" content="Rolling Forecast {MON}">
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
 <style>
 :root {{--bg:#f4f3ef;--surface:#fff;--text:#1a1a18;--text2:#7a7a74;--text3:#a5a59e;--border:#e6e3db;--accent:#d4af37;--accent2:#b8960f;--green:#2d6b4f;--green-bg:#e8f3ed;--red:#b33a3a;--red-bg:#f7e8e8;--dark:#0f2e24;--dt:#f5f0e8;--shadow:0 1px 3px rgba(0,0,0,.04);--sh-h:0 4px 12px rgba(0,0,0,.06);--r:10px}}
 [data-theme="dark"] {{--bg:#141412;--surface:#1e1e1b;--text:#e8e4dc;--text2:#99958c;--text3:#6b685e;--border:#2a2824;--green:#4aaf7a;--red:#e05555}}
 *{{margin:0;padding:0;box-sizing:border-box}}
-body{{font-family:'Inter','PingFang SC','Microsoft YaHei',sans-serif;background:var(--bg);color:var(--text);padding:24px 16px;transition:background .3s,color .3s}}
+body{{font-family:-apple-system,BlinkMacSystemFont,'PingFang SC','Microsoft YaHei','Helvetica Neue',sans-serif;background:var(--bg);color:var(--text);padding:24px 16px;transition:background .3s,color .3s}}
 .c{{max-width:1160px;margin:0 auto}}
 h1{{font-size:24px;font-weight:700;letter-spacing:-0.5px}} h1 span{{color:var(--accent)}}
 .st{{color:var(--text2);font-size:12px;margin-top:2px}}
@@ -312,10 +312,10 @@ ytd_cls = 'gn' if ytd_yoy >= 0 else 'rd'
 ka_cls = 'gn' if ka_chg >= 0 else 'rd'
 st_cls = 'gn' if st_chg >= 0 else 'rd'
 H.append(f'''<div class="gr g4">
-<div class="kc"><div class="kt">Rolling Forecast FY 2026</div><div class="kv">{fmt(total_rolling)}</div><div class="kd {var_cls}">vs AOB {fmt(total_aob)} · {("+" if total_var_pct>=0 else "")}{total_var_pct:.1f}%</div></div>
-<div class="kc"><div class="kt">YTD Rolling (Jan–May)</div><div class="kv">{fmt(ytd_rolling)}</div><div class="kd {ytd_cls}">{"+" if ytd_yoy>=0 else ""}{ytd_yoy:.1f}% vs 2025 YTD</div></div>
-<div class="kc"><div class="kt">Key Accounts YTD</div><div class="kv">{fmt(ka26)}</div><div class="kd {ka_cls}">{"+" if ka_chg>=0 else ""}{ka_chg:.1f}% vs 2025</div></div>
-<div class="kc"><div class="kt">Sales Team YTD</div><div class="kv">{fmt(st26)}</div><div class="kd {st_cls}">{"+" if st_chg>=0 else ""}{st_chg:.1f}% vs 2025</div></div>
+<div class="kc" onclick="showSource(this)" data-source="Rolling Forecast file (41 categories)"><div class="kt">Rolling Forecast FY 2026</div><div class="kv">{fmt(total_rolling)}</div><div class="kd {var_cls}">vs AOB {fmt(total_aob)} · {("+" if total_var_pct>=0 else "")}{total_var_pct:.1f}%</div></div>
+<div class="kc" onclick="showSource(this)" data-source="Rolling Forecast Jan-May sum"><div class="kt">YTD Rolling (Jan–May)</div><div class="kv">{fmt(ytd_rolling)}</div><div class="kd {ytd_cls}">{"+" if ytd_yoy>=0 else ""}{ytd_yoy:.1f}% vs 2025 YTD</div></div>
+<div class="kc" onclick="showSource(this)" data-source="Key Accounts sheet (4 accounts)"><div class="kt">Key Accounts YTD</div><div class="kv">{fmt(ka26)}</div><div class="kd {ka_cls}">{"+" if ka_chg>=0 else ""}{ka_chg:.1f}% vs 2025</div></div>
+<div class="kc" onclick="showSource(this)" data-source="Production Review Sales-2026 tab (4 sellers)"><div class="kt">Sales Team YTD</div><div class="kv">{fmt(st26)}</div><div class="kd {st_cls}">{"+" if st_chg>=0 else ""}{st_chg:.1f}% vs 2025</div></div>
 </div>''')
 
 # ─── BY RESPONSIBLE PERSON ───
@@ -468,6 +468,22 @@ H.append(f'''<div class="sec"><div class="sh"><span class="l">👥 Sales Team</s
 </div></div></div>''')
 
 # ─── FOOTER ───
+
+SHOW_SOURCE_JS = '''<script>
+function showSource(el){
+  var src=el.getAttribute("data-source");
+  if(!src)return;
+  var old=document.getElementById("stip");
+  if(old)old.remove();
+  var tip=document.createElement("div");
+  tip.id="stip";
+  tip.textContent="📊 "+src;
+  tip.style.cssText="position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:#1a1a18;color:#f5f0e8;padding:10px 18px;border-radius:8px;font-size:13px;z-index:9999;max-width:90vw;text-align:center;box-shadow:0 4px 16px rgba(0,0,0,.3)";
+  document.body.appendChild(tip);
+  setTimeout(function(){tip.style.opacity="0";tip.style.transition="opacity .3s";setTimeout(function(){tip.remove()},300);},3000);
+}
+</script>'''
+
 H.append(f'''<div class="ft">Spring City Golf · {MON} · Data: Rolling Forecast + Monthly Reports</div>
 </div>
 
@@ -497,7 +513,7 @@ scales:{{x:{{grid:{{display:false}},ticks:{{font:{{size:10}}}}}},
 y:{{beginAtZero:true,ticks:{{callback:v=>'¥'+(v*10000/10000).toLocaleString()+'w',font:{{size:10}}}}}}}}
 }})}};
 </script>
-</body></html>''')
+{SHOW_SOURCE_JS}</body></html>''')
 
 with open(OUT, 'w', encoding='utf-8') as f:
     f.write('\n'.join(H))
