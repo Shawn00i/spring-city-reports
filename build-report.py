@@ -113,7 +113,7 @@ total_yoy_pct = ((total_rolling / total_y25) * 100 - 100) if total_y25 else 0
 # Group by responsible person
 people = {}
 for c in real_cats:
-    rep = c['rep'] or 'Other'
+    rep = c['rep'] or '度假村其他'
     if rep not in people: people[rep] = {'rolling': 0, 'aob': 0, 'y25': 0, 'cats': []}
     people[rep]['rolling'] += c['rolling']
     people[rep]['aob'] += c['aob']
@@ -327,12 +327,12 @@ for pi, (name, pd) in enumerate(people_sorted):
     if pd['y25']:
         yoy = ((pd['rolling']/pd['y25'])*100-100)
         ycls = 'gn' if yoy >= 0 else 'rd'
-        yoy_s = f'{"+" if yoy>=0 else ""}{yoy:.1f}% vs 2025'
+        yoy_s = f'{"+" if yoy>=0 else ""}{yoy:.1f}% vs 2025' if pd["y25"] else 'N/A (2025 was ¥0)'
     else:
         ycls = 'gn'
         yoy_s = '—'
     cat_count = len(pd['cats'])
-    H.append(f'<div class="kc" style="animation-delay:{.2+pi*.08}s;border-top:3px solid {person_colors[pi%len(person_colors)]}"><div class="kt">{name}</div><div class="kv kv-sm">{fmt(pd["rolling"])}</div><div class="kd {vcls}">{"+" if var>=0 else ""}{fmt(abs(var))} vs AOB · {cat_count} segments</div><div class="kd {ycls}" style="margin-top:2px">{yoy_s}</div></div>')
+    H.append(f'<div class="kc" style="animation-delay:{.2+pi*.08}s;border-top:3px solid {person_colors[pi%len(person_colors)]}"><div class="kt">{name}</div><div class="kv kv-sm">{fmt(pd["rolling"])}</div><div class="kd {vcls}">{"+" if var>0 else ("-" if var<0 else "")}{fmt(abs(var))} vs AOB · {cat_count} segments</div><div class="kd {ycls}" style="margin-top:2px">{yoy_s}</div></div>')
 H.append('</div>')
 
 # ─── MONTHLY TREND CHART (AOB vs Rolling) ───
@@ -351,15 +351,15 @@ H.append(f'''<div class="sec"><div class="sh"><span class="l">\U0001f4c8 Monthly
 H.append(f'''<div class="sec"><div class="sh"><span class="l">🏷️ Top Revenue Segments</span><span class="t">Rolling Forecast · {len(real_cats)} categories</span><input class="sbar" type="text" placeholder="🔍 Filter..." oninput="filterTable(this,'tbl-cat')" style="margin-left:auto"></div>
 <div class="ca"><div class="tw"><table id="tbl-cat"><thead><tr>
 <th onclick="sortTable('tbl-cat',0)">Segment</th><th onclick="sortTable('tbl-cat',1)">Rep</th><th class="ar" onclick="sortTable('tbl-cat',2)">2025 Actual</th>
-<th class="ar" onclick="sortTable('tbl-cat',3)">2026 AOB</th><th class="ar" onclick="sortTable('tbl-cat',4)">Rolling Fcst</th><th class="pr" onclick="sortTable('tbl-cat',5)">Var vs AOB</th><th class="pr" onclick="sortTable('tbl-cat',6)">Var % vs AOB</th>
-<th class="pr" onclick="sortTable('tbl-cat',7)">YoY vs 2025</th></tr></thead><tbody>''')
+<th class="ar" onclick="sortTable('tbl-cat',3)">2026 AOB</th><th class="ar" onclick="sortTable('tbl-cat',4)">Rolling FY</th><th class="ar" onclick="sortTable('tbl-cat',5)">Rolling YTD</th><th class="pr" onclick="sortTable('tbl-cat',6)">Var vs AOB</th><th class="pr" onclick="sortTable('tbl-cat',7)">Var % vs AOB</th>
+<th class="pr" onclick="sortTable('tbl-cat',8)">YoY vs 2025</th></tr></thead><tbody>''')
 for cat in top_cats:
     var = cat['rolling'] - cat['aob']
     vpct = (var/cat['aob']*100) if cat['aob'] else 0
-    yoy_pct = ((cat['rolling']/cat['y25_actual'])*100-100) if cat['y25_actual'] else 0
+    yoy_pct = ((cat['rolling']/cat['y25_actual'])*100-100) if cat['y25_actual'] else None
     vcls = 'gn' if var >= 0 else 'rd'
-    ycls = 'gn' if yoy_pct >= 0 else 'rd'
-    H.append(f'<tr><td>{cat["name"][:30]}</td><td>{cat["rep"][:18] or "—"}</td><td class="ar">{fmt(cat["y25_actual"]) if cat["y25_actual"] else "—"}</td><td class="ar">{fmt(cat["aob"])}</td><td class="ar">{fmt(cat["rolling"])}</td><td class="ar">{fmt(cat.get("rolling_ytd", 0)) if cat.get("rolling_ytd", 0) else "—"}</td><td class="pr {vcls}">{"+" if var>=0 else ""}{fmt(abs(var))}</td><td class="pr {vcls}">{"+" if vpct>=0 else ""}{vpct:.1f}%</td><td class="pr {ycls}">{"+" if yoy_pct>=0 else ""}{yoy_pct:.1f}%</td></tr>')
+    ycls = 'gn' if yoy_pct is not None and yoy_pct >= 0 else ('rd' if yoy_pct is not None else 'gn')
+    H.append(f'<tr><td>{cat["name"][:30]}</td><td>{cat["rep"][:18] or "—"}</td><td class="ar">{fmt(cat["y25_actual"]) if cat["y25_actual"] else "—"}</td><td class="ar">{fmt(cat["aob"])}</td><td class="ar">{fmt(cat["rolling"])}</td><td class="ar">{fmt(cat.get("rolling_ytd", 0)) if cat.get("rolling_ytd", 0) else "—"}</td><td class="pr {vcls}">{"+" if var>=0 else ""}{fmt(abs(var))}</td><td class="pr {vcls}">{"+" if vpct>=0 else ""}{vpct:.1f}%</td><td class="pr {ycls}">{"+" if yoy_pct is not None and yoy_pct>=0 else ""}{f"{yoy_pct:.1f}%" if yoy_pct is not None else "N/A"}</td></tr>')
 H.append('</tbody></table></div></div></div>')
 
 # ─── GA REVENUE (from Rolling Forecast) ───
