@@ -250,7 +250,7 @@ H.append(f'''<!DOCTYPE html>
 <meta property="og:title" content="Spring City Sales Dashboard">
 <meta property="og:description" content="Rolling Forecast {MON}">
 
-<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
+<!-- Chart.js removed - using static table instead -->
 <style>
 :root {{--bg:#f4f3ef;--surface:#fff;--text:#1a1a18;--text2:#7a7a74;--text3:#a5a59e;--border:#e6e3db;--accent:#d4af37;--accent2:#b8960f;--green:#2d6b4f;--green-bg:#e8f3ed;--red:#b33a3a;--red-bg:#f7e8e8;--dark:#0f2e24;--dt:#f5f0e8;--shadow:0 1px 3px rgba(0,0,0,.04);--sh-h:0 4px 12px rgba(0,0,0,.06);--r:10px}}
 [data-theme="dark"] {{--bg:#141412;--surface:#1e1e1b;--text:#e8e4dc;--text2:#99958c;--text3:#6b685e;--border:#2a2824;--green:#4aaf7a;--red:#e05555}}
