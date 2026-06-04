@@ -1,0 +1,13 @@
+.openclaw/
+.clawhub/
+memory/
+*.pyc
+__pycache__/
+.DS_Store
+skills/
+poster-bg.jpg
+spring-city-golf-poster.html
+otb-annual-calendar.html
+refresh-dashboards.command
+build-dashboards.py
+build-monthly.py

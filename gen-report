@@ -1,0 +1,45 @@
+#!/bin/bash
+# ⛳ Spring City Monthly Report Generator
+# One command to generate, open, and (optionally) publish.
+
+set -e
+DIR="$(cd "$(dirname "$0")" && pwd)"
+SCRIPT="$DIR/build-report.py"
+OUTPUT="$DIR/monthly-report-dashboard.html"
+
+echo "═══════════════════════════════════════"
+echo "  ⛳ Spring City Golf Report Generator"
+echo "═══════════════════════════════════════"
+
+# Check for data files
+DATA_DIR="$HOME/Desktop/Monthly Report Gen"
+if [ ! -d "$DATA_DIR" ]; then
+    echo "⚠️  Data directory not found: $DATA_DIR"
+    echo "   Creating placeholder..."
+    mkdir -p "$DATA_DIR"
+fi
+
+echo ""
+echo "📁 Data folder: $DATA_DIR"
+echo ""
+
+# Check Python dependencies
+echo "🔍 Checking dependencies..."
+python3 -c "import openpyxl" 2>/dev/null || { echo "Installing openpyxl..."; pip3 install openpyxl -q; }
+echo ""
+
+# Generate
+echo "📊 Generating dashboard..."
+python3 "$SCRIPT"
+echo ""
+
+# Open in browser
+if [[ "$OSTYPE" == "darwin"* ]]; then
+    echo "🌐 Opening in browser..."
+    open "$OUTPUT"
+fi
+
+echo "═══════════════════════════════════════"
+echo "  ✅ Done!"
+echo "     📄 $OUTPUT"
+echo "═══════════════════════════════════════"
